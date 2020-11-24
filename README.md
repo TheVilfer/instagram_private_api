@@ -1,4 +1,5 @@
-# Instagram Private API
+# Instagram Private API fork by Vilfer
+## FIXED web api
 
 A Python wrapper for the Instagram private API with no 3rd party dependencies. Supports both the app and web APIs.
 
