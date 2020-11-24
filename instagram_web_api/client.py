@@ -37,6 +37,10 @@ except NameError:  # Python 2:
         pass
 from .http import ClientCookieJar, MultipartFormDataEncoder
 from .common import ClientDeprecationWarning
+import datetime
+import hashlib
+import string
+import random
 
 logger = logging.getLogger(__name__)
 warnings.simplefilter('always', ClientDeprecationWarning)
@@ -309,11 +313,9 @@ class Client(object):
 
     @staticmethod
     def _extract_rhx_gis(html):
-        mobj = re.search(
-            r'"rhx_gis":"(?P<rhx_gis>[a-f0-9]{32})"', html, re.MULTILINE)
-        if mobj:
-            return mobj.group('rhx_gis')
-        return None
+        options = string.ascii_lowercase + string.digits
+        text = ''.join([random.choice(options) for _ in range(8)])
+        return hashlib.md5(text.encode()).hexdigest()
 
     @staticmethod
     def _extract_csrftoken(html):
@@ -382,10 +384,14 @@ class Client(object):
         """Login to the web site."""
         if not self.username or not self.password:
             raise ClientError('username/password is blank')
-        params = {'username': self.username, 'password': self.password, 'queryParams': '{}'}
+
+        time = str(int(datetime.datetime.now().timestamp()))
+        enc_password = f"#PWD_INSTAGRAM_BROWSER:0:{time}:{self.password}"
+
+        params = {'username': self.username, 'enc_password': enc_password, 'queryParams': '{}', 'optIntoOneTap': False}
         self._init_rollout_hash()
         login_res = self._make_request('https://www.instagram.com/accounts/login/ajax/', params=params)
-        if not login_res.get('status', '') == 'ok' or not login_res.get('authenticated'):
+        if not login_res.get('status', '') == 'ok' or not login_res.get ('authenticated'):
             raise ClientLoginError('Unable to login')
 
         if self.on_login:
@@ -649,8 +655,7 @@ class Client(object):
         :return:
         """
         count = kwargs.pop('count', 10)
-        if count > 50:
-            raise ValueError('count cannot be greater than 50')
+
 
         end_cursor = kwargs.pop('end_cursor', None)
         variables = {
